@@ -67,6 +67,9 @@ static lua_Integer posrelat (lua_Integer pos, size_t len) {
 }
 
 
+/*
+ * Get sub string, index ranges from [start, end]
+*/
 static int str_sub (lua_State *L) {
   size_t l;
   const char *s = luaL_checklstring(L, 1, &l);
@@ -81,6 +84,9 @@ static int str_sub (lua_State *L) {
 }
 
 
+/*
+ * Reverse a string
+ */
 static int str_reverse (lua_State *L) {
   size_t l, i;
   luaL_Buffer b;

@@ -76,6 +76,9 @@ struct lua_longjmp;  /* defined in ldo.c */
 typedef struct stringtable {
   TString **hash;
   int nuse;  /* number of elements */
+  /*
+   * capacity, maximum number of elements
+   */
   int size;
 } stringtable;
 

@@ -375,18 +375,31 @@ LUALIB_API void luaL_checkstack (lua_State *L, int space, const char *msg) {
 }
 
 
+/*
+ * Checks whether the function argument arg has type t.
+ */
 LUALIB_API void luaL_checktype (lua_State *L, int arg, int t) {
   if (lua_type(L, arg) != t)
     tag_error(L, arg, t);
 }
 
 
+/*
+ * Checks whether the function has an argument of any type (including nil)
+ * at position arg.
+ */
 LUALIB_API void luaL_checkany (lua_State *L, int arg) {
   if (lua_type(L, arg) == LUA_TNONE)
     luaL_argerror(L, arg, "value expected");
 }
 
 
+/*
+ * Checks whether the function argument arg is a string
+ * (or can be converted to a string, i.e. string or number)
+ * and returns this string;
+ * if len is not NULL fills *len with the string's length.
+ */
 LUALIB_API const char *luaL_checklstring (lua_State *L, int arg, size_t *len) {
   const char *s = lua_tolstring(L, arg, len);
   if (!s) tag_error(L, arg, LUA_TSTRING);
@@ -394,6 +407,11 @@ LUALIB_API const char *luaL_checklstring (lua_State *L, int arg, size_t *len) {
 }
 
 
+/*
+ * If the function argument arg is a string, returns this string.
+ * If this argument is absent or is nil, returns d.
+ * Otherwise, raises an error.
+ */
 LUALIB_API const char *luaL_optlstring (lua_State *L, int arg,
                                         const char *def, size_t *len) {
   if (lua_isnoneornil(L, arg)) {
@@ -405,6 +423,10 @@ LUALIB_API const char *luaL_optlstring (lua_State *L, int arg,
 }
 
 
+/*
+ * Checks whether the function argument arg is a number
+ * and returns this number.
+ */
 LUALIB_API lua_Number luaL_checknumber (lua_State *L, int arg) {
   int isnum;
   lua_Number d = lua_tonumberx(L, arg, &isnum);
@@ -414,6 +436,11 @@ LUALIB_API lua_Number luaL_checknumber (lua_State *L, int arg) {
 }
 
 
+/*
+ * If the function argument arg is a number, returns this number.
+ * If this argument is absent or is nil, returns def.
+ * Otherwise, raises an error.
+ */
 LUALIB_API lua_Number luaL_optnumber (lua_State *L, int arg, lua_Number def) {
   return luaL_opt(L, luaL_checknumber, arg, def);
 }
@@ -427,6 +454,11 @@ static void interror (lua_State *L, int arg) {
 }
 
 
+/*
+ * Checks whether the function argument arg is an integer
+ * (or can be converted to an integer)
+ * and returns this integer cast to a lua_Integer.
+ */
 LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int arg) {
   int isnum;
   lua_Integer d = lua_tointegerx(L, arg, &isnum);
@@ -437,6 +469,12 @@ LUALIB_API lua_Integer luaL_checkinteger (lua_State *L, int arg) {
 }
 
 
+/*
+ * If the function argument arg is an integer
+ * (or convertible to an integer), returns this integer.
+ * If this argument is absent or is nil, returns d.
+ * Otherwise, raises an error.
+ */
 LUALIB_API lua_Integer luaL_optinteger (lua_State *L, int arg,
                                                       lua_Integer def) {
   return luaL_opt(L, luaL_checkinteger, arg, def);
@@ -502,6 +540,13 @@ static void *newbox (lua_State *L, size_t newsize) {
 /*
 ** returns a pointer to a free area with at least 'sz' bytes
 */
+/*
+ * Returns an address to a space of size sz
+ * where you can copy a string to be added to buffer B.
+ * After copying the string into this space
+ * you must call luaL_addsize with the size of the string
+ * to actually add it to the buffer.
+ */
 LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
   lua_State *L = B->L;
   if (B->size - B->n < sz) {  /* not enough space? */
@@ -525,6 +570,9 @@ LUALIB_API char *luaL_prepbuffsize (luaL_Buffer *B, size_t sz) {
 }
 
 
+/*
+ * Adds the string pointed to by s with length l to the buffer B
+ */
 LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
   if (l > 0) {  /* avoid 'memcpy' when 's' can be NULL */
     char *b = luaL_prepbuffsize(B, l);
@@ -534,11 +582,18 @@ LUALIB_API void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l) {
 }
 
 
+/*
+ * Adds the zero-terminated string pointed to by s to the buffer B
+ */
 LUALIB_API void luaL_addstring (luaL_Buffer *B, const char *s) {
   luaL_addlstring(B, s, strlen(s));
 }
 
 
+/*
+ * Finishes the use of buffer B
+ * leaving the final string on the top of the stack.
+ */
 LUALIB_API void luaL_pushresult (luaL_Buffer *B) {
   lua_State *L = B->L;
   lua_pushlstring(L, B->b, B->n);
@@ -566,6 +621,11 @@ LUALIB_API void luaL_addvalue (luaL_Buffer *B) {
 }
 
 
+/*
+ * Initializes a buffer B.
+ * This function does not allocate any space;
+ * the buffer must be declared as a variable
+*/
 LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
   B->L = L;
   B->b = B->initb;
@@ -574,6 +634,9 @@ LUALIB_API void luaL_buffinit (lua_State *L, luaL_Buffer *B) {
 }
 
 
+/*
+ * Equivalent to the sequence luaL_buffinit, luaL_prepbuffsize.
+ */
 LUALIB_API char *luaL_buffinitsize (lua_State *L, luaL_Buffer *B, size_t sz) {
   luaL_buffinit(L, B);
   return luaL_prepbuffsize(B, sz);

@@ -164,11 +164,23 @@ LUA_API int lua_absindex (lua_State *L, int idx) {
 }
 
 
+/*
+ * Returns the index of the top element in the stack.
+ * Because indices start at 1,
+ * this result is equal to the number of elements in the stack;
+ * in particular, 0 means an empty stack.
+ */
 LUA_API int lua_gettop (lua_State *L) {
   return cast_int(L->top - (L->ci->func + 1));
 }
 
 
+/*
+ * Accepts any index, or 0, and sets the stack top to this index.
+ * If the new top is larger than the old one,
+ * then the new elements are filled with nil.
+ * If index is 0, then all stack elements are removed.
+ */
 LUA_API void lua_settop (lua_State *L, int idx) {
   StkId func = L->ci->func;
   lua_lock(L);
@@ -353,6 +365,13 @@ LUA_API lua_Number lua_tonumberx (lua_State *L, int idx, int *pisnum) {
 }
 
 
+/*
+ * Converts the Lua value at the given index to
+ * the signed integral type lua_Integer.
+ * The Lua value must be an integer,
+ * or a number or string convertible to an integer;
+ * otherwise, lua_tointegerx returns 0.
+ */
 LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
   lua_Integer res;
   const TValue *o = index2addr(L, idx);
@@ -364,12 +383,37 @@ LUA_API lua_Integer lua_tointegerx (lua_State *L, int idx, int *pisnum) {
 }
 
 
+/*
+ * Converts the Lua value at the given index to a C boolean value (0 or 1).
+ * lua_toboolean returns true for any Lua value different from false and nil;
+ * otherwise it returns false.
+ * (If you want to accept only actual boolean values,
+ * use lua_isboolean to test the value's type.)
+ */
 LUA_API int lua_toboolean (lua_State *L, int idx) {
   const TValue *o = index2addr(L, idx);
   return !l_isfalse(o);
 }
 
 
+/*
+ * Converts the Lua value at the given index to a C string.
+ * If len is not NULL, it sets *len with the string length.
+ * The Lua value must be a string or a number;
+ * otherwise, the function returns NULL.
+ * If the value is a number, then lua_tolstring also
+ * changes the actual value in the stack to a string.
+ * (This change confuses lua_next when lua_tolstring is
+ * applied to keys during a table traversal.)
+ *
+ * lua_tolstring returns a pointer to a string inside the Lua state.
+ * This string always has a zero ('\0') after its last character (as in C),
+ * but can contain other zeros in its body.
+ *
+ * Since Lua has garbage collection, there is no guarantee
+ * that the pointer returned by lua_tolstring will be valid
+ * after the corresponding Lua value is removed from the stack.
+ */
 LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
   StkId o = index2addr(L, idx);
   if (!ttisstring(o)) {
@@ -447,6 +491,9 @@ LUA_API const void *lua_topointer (lua_State *L, int idx) {
 */
 
 
+/*
+ * Pushes a nil value onto the stack.
+ */
 LUA_API void lua_pushnil (lua_State *L) {
   lua_lock(L);
   setnilvalue(L->top);
@@ -455,6 +502,9 @@ LUA_API void lua_pushnil (lua_State *L) {
 }
 
 
+/*
+ * Pushes a float with value n onto the stack.
+ */
 LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
   lua_lock(L);
   setfltvalue(L->top, n);
@@ -463,6 +513,9 @@ LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
 }
 
 
+/*
+ * Pushes a integer with value n onto the stack.
+ */
 LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
   lua_lock(L);
   setivalue(L->top, n);
@@ -476,6 +529,15 @@ LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
 ** 'len' == 0 (as 's' can be NULL in that case), due to later use of
 ** 'memcmp' and 'memcpy'.
 */
+/*
+ * Pushes the string pointed to by s with size len onto the stack.
+ * Lua makes (or reuses) an internal copy of the given string,
+ * so the memory at s can be freed or
+ * reused immediately after the function returns.
+ * The string can contain any binary data, including embedded zeros.
+ *
+ * Returns a pointer to the internal copy of the string.
+ */
 LUA_API const char *lua_pushlstring (lua_State *L, const char *s, size_t len) {
   TString *ts;
   lua_lock(L);
@@ -488,6 +550,16 @@ LUA_API const char *lua_pushlstring (lua_State *L, const char *s, size_t len) {
 }
 
 
+/*
+ * Pushes the zero-terminated string pointed to by s onto the stack.
+ * Lua makes (or reuses) an internal copy of the given string,
+ * so the memory at s can be freed or reused immediately
+ * after the function returns.
+ *
+ * Returns a pointer to the internal copy of the string.
+ *
+ * If s is NULL, pushes nil and returns NULL.
+ */
 LUA_API const char *lua_pushstring (lua_State *L, const char *s) {
   lua_lock(L);
   if (s == NULL)
@@ -516,6 +588,10 @@ LUA_API const char *lua_pushvfstring (lua_State *L, const char *fmt,
 }
 
 
+/*
+ * Pushes onto the stack a formatted string
+ * and returns a pointer to this string.
+ */
 LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
   const char *ret;
   va_list argp;
@@ -1013,6 +1089,20 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
 }
 
 
+/*
+ * Dumps a function as a binary chunk.
+ * Receives a Lua function on the top of the stack
+ * and produces a binary chunk that, if loaded again,
+ * results in a function equivalent to the one dumped.
+ *
+ * If strip is true, the binary representation may not
+ * include all debug information about the function, to save space.
+ *
+ * The value returned is the error code
+ * returned by the last call to the writer; 0 means no errors.
+ *
+ * This function does not pop the Lua function from the stack.
+ */
 LUA_API int lua_dump (lua_State *L, lua_Writer writer, void *data, int strip) {
   int status;
   TValue *o;
@@ -1163,6 +1253,11 @@ LUA_API void lua_len (lua_State *L, int idx) {
 }
 
 
+/*
+ * Returns the memory-allocation function of a given state.
+ * If ud is not NULL, Lua stores in *ud the opaque pointer
+ * given when the memory-allocator function was set.
+ */
 LUA_API lua_Alloc lua_getallocf (lua_State *L, void **ud) {
   lua_Alloc f;
   lua_lock(L);

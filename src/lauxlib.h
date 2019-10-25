@@ -134,6 +134,12 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 
 #define luaL_getmetatable(L,n)	(lua_getfield(L, LUA_REGISTRYINDEX, (n)))
 
+/*
+ * If the argument n is nil or absent, the macro results in the default d.
+ * Otherwise, it results in the result of
+ * calling func with the state L and the argument index n as arguments.
+ * Note that it evaluates the expression dflt only if needed.
+ */
 #define luaL_opt(L,f,n,d)	(lua_isnoneornil(L,(n)) ? (d) : f(L,(n)))
 
 #define luaL_loadbuffer(L,s,sz,n)	luaL_loadbufferx(L,s,sz,n,NULL)
@@ -145,6 +151,28 @@ LUALIB_API void (luaL_requiref) (lua_State *L, const char *modname,
 ** =======================================================
 */
 
+/*
+ * Type for a string buffer.
+ * A string buffer allows C code to build Lua strings piecemeal.
+ *
+ * Its pattern of use is as follows:
+ * 1. First declare a variable b of type luaL_Buffer.
+ * 2. Then initialize it with a call luaL_buffinit(L, &b).
+ * 3. Then add string pieces to the buffer calling
+ *    any of the luaL_add* functions.
+ * 4. Finish by calling luaL_pushresult(&b).
+ *    This call leaves the final string on the top of the stack.
+ *
+ * If you know beforehand the total size of the resulting string,
+ * you can use the buffer like this:
+ * 1. First declare a variable b of type luaL_Buffer.
+ * 2. Then initialize it and preallocate a space of size sz
+ *    with a call luaL_buffinitsize(L, &b, sz).
+ * 3. Then copy the string into that space.
+ * 4. Finish by calling luaL_pushresultsize(&b, sz),
+ *    where sz is the total size of the resulting
+ *    string copied into that space.
+ */
 typedef struct luaL_Buffer {
   char *b;  /* buffer address */
   size_t size;  /* buffer size */
@@ -158,6 +186,10 @@ typedef struct luaL_Buffer {
   ((void)((B)->n < (B)->size || luaL_prepbuffsize((B), 1)), \
    ((B)->b[(B)->n++] = (c)))
 
+/*
+ * Adds to the buffer B (see luaL_Buffer) a string of length n
+ * previously copied to the buffer area (see luaL_prepbuffer).
+ */
 #define luaL_addsize(B,s)	((B)->n += (s))
 
 LUALIB_API void (luaL_buffinit) (lua_State *L, luaL_Buffer *B);

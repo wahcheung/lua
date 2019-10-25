@@ -35,6 +35,36 @@
 ** bit 6: whether value is collectable
 */
 
+/*
+ * Tags for Tagged Values have the following use of bits:
+ *
+ * LUA_TNIL            0b00000000
+ *
+ * LUA_TBOOLEAN        0b00000001
+ *
+ * LUA_TLIGHTUSERDATA  0b00000010
+ *
+ * LUA_TNUMBER         0b00000011
+ * LUA_TNUMFLT         0b00000011
+ * LUA_TNUMINT         0b00010011
+ *
+ * LUA_TSTRING         0b00000100
+ * LUA_TSHRSTR         0b00000100
+ * LUA_TLNGSTR         0b00010100
+ *
+ * LUA_TTABLE          0b00000101
+ *
+ * LUA_TFUNCTION       0b00000110
+ * LUA_TLCL            0b00000110
+ * LUA_TLCF            0b00010110
+ * LUA_TCCL            0b00100110
+ *
+ * LUA_TUSERDATA       0b00000111
+ *
+ * LUA_TTHREAD         0b00001000
+ *
+ * BIT_ISCOLLECTABLE   0b01000000
+ */
 
 /*
 ** LUA_TFUNCTION variants:
@@ -110,6 +140,13 @@ typedef union Value {
 #define TValuefields	Value value_; int tt_
 
 
+/*
+ * An actual value plus a tag with its type.
+ * Tags for Tagged Values have the following use of bits:
+ * bits 0-3: actual tag (a LUA_T* value)
+ * bits 4-5: variant bits
+ * bit 6: whether value is collectable
+ */
 typedef struct lua_TValue {
   TValuefields;
 } TValue;
@@ -127,18 +164,33 @@ typedef struct lua_TValue {
 #define rttype(o)	((o)->tt_)
 
 /* tag with no variants (bits 0-3) */
+/*
+ * Get basic type tag (without variants) of a type tag (tt_)
+ */
 #define novariant(x)	((x) & 0x0F)
 
 /* type tag of a TValue (bits 0-3 for tags + variant bits 4-5) */
 #define ttype(o)	(rttype(o) & 0x3F)
 
 /* type tag of a TValue with no variants (bits 0-3) */
+/*
+ * Get basic type tag (without variants) of a TValue
+ */
 #define ttnov(o)	(novariant(rttype(o)))
 
 
 /* Macros to test type */
+/*
+ * Check raw type tag (with variants) of a TValue
+ */
 #define checktag(o,t)		(rttype(o) == (t))
+/*
+ * Check basic type tag (without variants) of a TValue
+ */
 #define checktype(o,t)		(ttnov(o) == (t))
+/*
+ * Check type tag of a TValue
+ */
 #define ttisnumber(o)		checktype((o), LUA_TNUMBER)
 #define ttisfloat(o)		checktag((o), LUA_TNUMFLT)
 #define ttisinteger(o)		checktag((o), LUA_TNUMINT)
@@ -185,16 +237,28 @@ typedef struct lua_TValue {
 
 
 /* Macros for internal tests */
+/*
+ * Check if the type tag of TValue and type tag of TValue's gc matched
+ */
 #define righttt(obj)		(ttype(obj) == gcvalue(obj)->tt)
 
+/*
+ * Check if the obj has been garbage collected
+ */
 #define checkliveness(L,obj) \
 	lua_longassert(!iscollectable(obj) || \
 		(righttt(obj) && (L == NULL || !isdead(G(L),gcvalue(obj)))))
 
 
 /* Macros to set values */
+/*
+ * Set type tag of a TValue
+ */
 #define settt_(o,t)	((o)->tt_=(t))
 
+/*
+ * Set value of TValue to x, and set type tag to LUA_TNUMFLT
+ */
 #define setfltvalue(obj,x) \
   { TValue *io=(obj); val_(io).n=(x); settt_(io, LUA_TNUMFLT); }
 
@@ -291,6 +355,9 @@ typedef struct lua_TValue {
 */
 
 
+/*
+ * StkId(Stack Id) is pointer to TValue
+ */
 typedef TValue *StkId;  /* index to stack elements */
 
 
@@ -300,7 +367,18 @@ typedef TValue *StkId;  /* index to stack elements */
 ** Header for string value; string bytes follow the end of this structure
 ** (aligned according to 'UTString'; see next).
 */
+/*
+ * For short string, extra > 0 means it's a reserved word,
+ * and value of extra corresponding to token value of lexical analysis.
+ *
+ * Normally, lua will not calculate hash value for long strings,
+ * except for those long strings used for index, in such case,
+ * extra field indicates whether hash value of string has been calculated.
+ */
 typedef struct TString {
+  /*
+   * GCObject *next; lu_byte tt; lu_byte marked;
+   */
   CommonHeader;
   lu_byte extra;  /* reserved words for short strings; "has hash" for longs */
   lu_byte shrlen;  /* length for short strings */

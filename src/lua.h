@@ -102,6 +102,10 @@ typedef LUA_KCONTEXT lua_KContext;
 /*
 ** Type for C functions registered with Lua
 */
+/*
+ * lua_CFunction is a pointer to a function that
+ * takes a pointer to lua_State as an argument and returns an int
+ */
 typedef int (*lua_CFunction) (lua_State *L);
 
 /*
